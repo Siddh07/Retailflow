@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler } from 'express'
+import { ApiError } from '../errors/api-error.js'
 
 export const errorHandler: ErrorRequestHandler = (
     error,
@@ -8,6 +9,16 @@ export const errorHandler: ErrorRequestHandler = (
 ) => {
     if (res.headersSent) {
         next(error)
+        return
+    }
+
+    if (error instanceof ApiError) {
+        res.status(error.statusCode).json({
+            error: {
+                code: error.code,
+                message: error.message
+            }
+        })
         return
     }
 
@@ -26,6 +37,11 @@ export const errorHandler: ErrorRequestHandler = (
 
         return
     }
+
+
+
+
+
 
     console.error(error)
 
