@@ -1,11 +1,48 @@
-import app from './app.js'
+import 'dotenv/config'
+import { createApp } from './app.js'
+import { createDatabaseClient } from './db/client.js'
 
 const port = Number(process.env.PORT ?? '3000')
+const connectionString = process.env.DATABASE_URL
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('PORT must be an integer between 1 and 65535')
 }
 
-app.listen(port, () => {
-    console.log(`RetailFlow API is running at http://localhost:${port}`)
+if (!connectionString) {
+    throw new Error('DATABASE_URL is required')
+}
+
+const db = createDatabaseClient(connectionString)
+
+async function start() {
+    await db.$connect()
+    const app = createApp(db)
+
+    const server = app.listen(port, () => {
+        console.log(`RetailFlow API: http://localhost:${port}`)
+    })
+
+    let stopping = false
+
+    function shutdown() {
+        if (stopping) return
+        stopping = true
+
+        server.close(() => {
+            void db.$disconnect().catch((error) => {
+                console.error(error)
+                process.exitCode = 1
+            })
+        })
+    }
+
+    process.once('SIGINT', shutdown)
+    process.once('SIGTERM', shutdown)
+}
+
+start().catch(async (error) => {
+    console.error(error)
+    await db.$disconnect()
+    process.exitCode = 1
 })

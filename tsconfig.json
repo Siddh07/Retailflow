@@ -9,6 +9,7 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "noEmitOnError": true,
+        "rewriteRelativeImportExtensions": true,
         "types": [
             "node"
         ]

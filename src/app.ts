@@ -1,8 +1,9 @@
 import express from 'express'
+import type { PrismaClient } from './generated/prisma/client.js'
 import { createProductRouter } from './routes/product.routes.js'
-import { errorHandler } from './middleware/errorhandler.js'
+import { errorHandler } from './middleware/error-handler.js'
 
-export function createApp() {
+export function createApp(db: PrismaClient) {
     const app = express()
 
     app.use(express.json({ limit: '100kb' }))
@@ -14,7 +15,7 @@ export function createApp() {
         })
     })
 
-    app.use('/api/v1/products', createProductRouter())
+    app.use('/api/v1/products', createProductRouter(db))
 
     app.use((req, res) => {
         res.status(404).json({
@@ -29,5 +30,3 @@ export function createApp() {
 
     return app
 }
-
-export default createApp()

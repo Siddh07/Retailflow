@@ -1,0 +1,110 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id            String      @id @default(uuid()) @db.Uuid
+  name          String      @db.VarChar(100)
+  sku           String      @unique @db.VarChar(30)
+  price         Int
+  stockQuantity Int         @map("stock_quantity")
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  orderItems    OrderItem[]
+
+  @@index([isActive, name, id])
+  @@map("products")
+}
+
+enum Role {
+  ADMIN
+  CASHIER
+}
+
+enum CustomerStatus {
+  ACTIVE
+  PENDING
+  CLOSED
+}
+
+enum OrderStatus {
+  COMPLETED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String   @map("password_hash")
+  role         Role     @default(CASHIER)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  orders       Order[]
+
+  @@map("users")
+}
+
+model Customer {
+  id        String         @id @default(uuid()) @db.Uuid
+  name      String         @db.VarChar(100)
+  email     String?        @db.VarChar(254)
+  phone     String?        @db.VarChar(30)
+  company   String?        @db.VarChar(100)
+  status    CustomerStatus @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at")
+  orders    Order[]
+
+  @@map("customers")
+}
+
+model Order {
+  id            String        @id @default(uuid()) @db.Uuid
+  orderNumber   String        @unique @map("order_number")
+  customerId    String?       @map("customer_id") @db.Uuid
+  cashierId     String        @map("cashier_id") @db.Uuid
+  subtotal      Int
+  tax           Int           @default(0)
+  discount      Int           @default(0)
+  total         Int
+  paymentMethod PaymentMethod @default(CASH) @map("payment_method")
+  status        OrderStatus   @default(COMPLETED)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  cashier       User          @relation(fields: [cashierId], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+
+  @@index([customerId, createdAt])
+  @@index([cashierId])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  orderId     String  @map("order_id") @db.Uuid
+  productId   String  @map("product_id") @db.Uuid
+  productName String  @map("product_name") @db.VarChar(100)
+  productSku  String  @map("product_sku") @db.VarChar(30)
+  unitPrice   Int     @map("unit_price")
+  quantity    Int
+  lineTotal   Int     @map("line_total")
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}

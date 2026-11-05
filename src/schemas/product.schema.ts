@@ -1,7 +1,6 @@
 import { z } from 'zod'
 
-
-
+export const productIdSchema = z.uuid()
 
 export const createProductSchema = z.strictObject({
     name: z.string().trim().min(1).max(100),
@@ -26,10 +25,6 @@ export const updateProductSchema = createProductSchema
     .refine((data) => Object.keys(data).length > 0, {
         message: 'Provide at least one field to update'
     })
-
-export type Product = z.infer<typeof createProductSchema> & {
-    id: string
-}
 
 const positiveIntegerQuery = z
     .string()
