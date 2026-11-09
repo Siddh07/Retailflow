@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { createApp } from './app.js'
 import { createDatabaseClient } from './db/client.js'
+import { loadAuthConfig } from './auth/config.js'
 
 const port = Number(process.env.PORT ?? '3000')
 const connectionString = process.env.DATABASE_URL
@@ -17,8 +18,8 @@ const db = createDatabaseClient(connectionString)
 
 async function start() {
     await db.$connect()
-    const app = createApp(db)
-
+    const authConfig = await loadAuthConfig()
+    const app = createApp(db, authConfig)
     const server = app.listen(port, () => {
         console.log(`RetailFlow API: http://localhost:${port}`)
     })
