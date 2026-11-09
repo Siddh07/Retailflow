@@ -9,7 +9,7 @@ import {
     hashRefreshToken,
     newRefreshToken,
     signAccessToken
-} from './tokens.js'
+} from './token.js'
 import {
     createRequireAuth,
     currentAuth

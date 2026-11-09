@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { ApiError } from '../errors/api-error.js'
+import { requireAdmin } from '../auth/middleware.js'
 import {
     createProductSchema,
     updateProductSchema,
@@ -89,7 +90,7 @@ export function createProductRouter(db: PrismaClient) {
         res.status(200).json({ data: product })
     })
 
-    router.post('/', async (req, res) => {
+    router.post('/', requireAdmin, async (req, res) => {
         const input = createProductSchema.parse(req.body)
 
         const product = await db.product.create({
@@ -102,7 +103,7 @@ export function createProductRouter(db: PrismaClient) {
             .json({ data: product })
     })
 
-    router.patch('/:id', async (req, res) => {
+    router.patch('/:id', requireAdmin, async (req, res) => {
         const id = productIdSchema.parse(req.params.id)
         const input = updateProductSchema.parse(req.body)
 
@@ -114,7 +115,7 @@ export function createProductRouter(db: PrismaClient) {
         res.status(200).json({ data: product })
     })
 
-    router.delete('/:id', async (req, res) => {
+    router.delete('/:id', requireAdmin, async (req, res) => {
         const id = productIdSchema.parse(req.params.id)
 
         await db.product.update({

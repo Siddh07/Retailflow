@@ -1,8 +1,11 @@
+import { randomBytes } from 'node:crypto'
 import { config } from 'dotenv'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from '../src/app.js'
 import { createDatabaseClient } from '../src/db/client.js'
+import { loadAuthConfig, type AuthConfig } from '../src/auth/config.js'
+import { hashPassword } from '../src/auth/password.js'
 
 config({ path: '.env.test', override: true })
 
@@ -22,7 +25,12 @@ if (
 }
 
 const db = createDatabaseClient(connectionString)
-const app = createApp(db)
+
+let app: ReturnType<typeof createApp>
+let authConfig: AuthConfig
+let adminPasswordHash: string
+let adminToken: string
+const adminPassword = 'A long test administrator passphrase'
 
 const keyboardId = '11111111-1111-4111-8111-111111111111'
 const mouseId = '22222222-2222-4222-8222-222222222222'
@@ -45,11 +53,19 @@ beforeAll(async () => {
     if (rows[0]?.name !== 'retailflow_test') {
         throw new Error('Connected database is not retailflow_test')
     }
+
+    authConfig = await loadAuthConfig({
+        NODE_ENV: 'test',
+        APP_ORIGIN: 'http://localhost:5173',
+        JWT_SECRET_BASE64: randomBytes(32).toString('base64')
+    })
+    adminPasswordHash = await hashPassword(adminPassword)
 })
 
 beforeEach(async () => {
     // Delete children before parents because of foreign keys.
     await db.$transaction([
+        db.session.deleteMany(),
         db.orderItem.deleteMany(),
         db.order.deleteMany(),
         db.customer.deleteMany(),
@@ -75,6 +91,27 @@ beforeEach(async () => {
             }
         ]
     })
+
+    app = createApp(db, authConfig)
+
+    await db.user.create({
+        data: {
+            email: 'admin@example.com',
+            passwordHash: adminPasswordHash,
+            role: 'ADMIN'
+        }
+    })
+
+    const login = await request(app)
+        .post('/api/v1/auth/login')
+        .set('X-CSRF-Protection', '1')
+        .send({
+            email: 'admin@example.com',
+            password: adminPassword
+        })
+        .expect(200)
+
+    adminToken = login.body.data.accessToken
 })
 
 afterAll(async () => {
@@ -85,6 +122,8 @@ describe('Database-backed products', () => {
     it('stores a created product in PostgreSQL', async () => {
         const response = await request(app)
             .post('/api/v1/products')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .set('X-CSRF-Protection', '1')
             .send(validProduct)
 
         expect(response.status).toBe(201)
@@ -104,6 +143,8 @@ describe('Database-backed products', () => {
     ])('rejects invalid creation: %j', async (changes) => {
         await request(app)
             .post('/api/v1/products')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .set('X-CSRF-Protection', '1')
             .send({ ...validProduct, ...changes })
             .expect(400)
 
@@ -113,6 +154,8 @@ describe('Database-backed products', () => {
     it('rejects a duplicate SKU after normalization', async () => {
         const response = await request(app)
             .post('/api/v1/products')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .set('X-CSRF-Protection', '1')
             .send({ ...validProduct, sku: ' key-001 ' })
 
         expect(response.status).toBe(409)
@@ -121,8 +164,16 @@ describe('Database-backed products', () => {
 
     it('allows only one concurrent creation of the same SKU', async () => {
         const responses = await Promise.all([
-            request(app).post('/api/v1/products').send(validProduct),
-            request(app).post('/api/v1/products').send(validProduct)
+            request(app)
+                .post('/api/v1/products')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .set('X-CSRF-Protection', '1')
+                .send(validProduct),
+            request(app)
+                .post('/api/v1/products')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .set('X-CSRF-Protection', '1')
+                .send(validProduct)
         ])
 
         expect(
@@ -137,6 +188,8 @@ describe('Database-backed products', () => {
     it('updates a product and preserves unrelated fields', async () => {
         await request(app)
             .patch(`/api/v1/products/${keyboardId}`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .set('X-CSRF-Protection', '1')
             .send({ price: 2500 })
             .expect(200)
 
@@ -152,6 +205,8 @@ describe('Database-backed products', () => {
     it('rejects a conflicting update without partial changes', async () => {
         await request(app)
             .patch(`/api/v1/products/${keyboardId}`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .set('X-CSRF-Protection', '1')
             .send({ sku: 'MOU-001', price: 50 })
             .expect(409)
 
@@ -166,10 +221,13 @@ describe('Database-backed products', () => {
     it('archives rather than physically deleting', async () => {
         await request(app)
             .delete(`/api/v1/products/${keyboardId}`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .set('X-CSRF-Protection', '1')
             .expect(204)
 
         await request(app)
             .get(`/api/v1/products/${keyboardId}`)
+            .set('Authorization', `Bearer ${adminToken}`)
             .expect(404)
 
         const stored = await db.product.findUniqueOrThrow({
@@ -178,7 +236,9 @@ describe('Database-backed products', () => {
 
         expect(stored.isActive).toBe(false)
 
-        const list = await request(app).get('/api/v1/products')
+        const list = await request(app)
+            .get('/api/v1/products')
+            .set('Authorization', `Bearer ${adminToken}`)
 
         expect(list.body.pagination.total).toBe(1)
     })
@@ -186,10 +246,12 @@ describe('Database-backed products', () => {
     it('distinguishes malformed IDs from missing records', async () => {
         await request(app)
             .get('/api/v1/products/not-a-uuid')
+            .set('Authorization', `Bearer ${adminToken}`)
             .expect(400)
 
         await request(app)
             .get(`/api/v1/products/${missingId}`)
+            .set('Authorization', `Bearer ${adminToken}`)
             .expect(404)
     })
 
@@ -198,6 +260,7 @@ describe('Database-backed products', () => {
 
         const response = await request(app)
             .get('/api/v1/products')
+            .set('Authorization', `Bearer ${adminToken}`)
             .query({
                 search: 'MO',
                 sortBy: 'price',

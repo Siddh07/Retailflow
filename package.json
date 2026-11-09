@@ -7,6 +7,7 @@
     "start": "node ./dist/server.js",
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
+    "bootstrap:admin": "tsx --env-file=.env --env-file=.env.bootstrap scripts/create-admin.ts",
     "seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
