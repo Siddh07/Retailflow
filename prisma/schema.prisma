@@ -11,15 +11,19 @@ datasource db {
 }
 
 model Product {
-  id            String      @id @default(uuid()) @db.Uuid
-  name          String      @db.VarChar(100)
-  sku           String      @unique @db.VarChar(30)
-  price         Int
-  stockQuantity Int         @map("stock_quantity")
-  isActive      Boolean     @default(true) @map("is_active")
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-  orderItems    OrderItem[]
+  id                String               @id @default(uuid()) @db.Uuid
+  name              String               @db.VarChar(100)
+  sku               String               @unique @db.VarChar(30)
+  price             Int
+  costPrice         Int?                 @map("cost_price")
+  barcode           String?              @db.VarChar(100)
+  stockQuantity     Int                  @map("stock_quantity")
+  lowStockThreshold Int                  @default(0) @map("low_stock_threshold")
+  isActive          Boolean              @default(true) @map("is_active")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  orderItems        OrderItem[]
+  inventoryMovements InventoryMovement[]
 
   @@index([isActive, name, id])
   @@map("products")
@@ -28,6 +32,13 @@ model Product {
 enum Role {
   ADMIN
   CASHIER
+}
+
+enum MovementKind {
+  OPENING
+  RECEIPT
+  SALE
+  CORRECTION
 }
 
 enum CustomerStatus {
@@ -122,4 +133,23 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+model InventoryMovement {
+  id        String       @id @default(uuid()) @db.Uuid 
+  productId String       @map("product_id") @db.Uuid 
+  kind      MovementKind
+  delta     Int
+  reason    String       @db.VarChar(200)
+  actorId   String?      @map("actor_id") @db.Uuid
+  orderId   String?      @map("order_id") @db.Uuid
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([productId, createdAt])
+  @@index([actorId])
+  @@map("inventory_movements")
 }
