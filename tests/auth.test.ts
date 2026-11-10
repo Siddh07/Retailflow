@@ -471,3 +471,4 @@ describe('Authentication and permissions', () => {
             .expect(401)
     })
 })
+
