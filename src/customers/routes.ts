@@ -30,12 +30,12 @@ export function createCustomerRouter(db: PrismaClient) {
             ...(status ? { status } : {}),
             ...(term
                 ? {
-                      OR: [
-                          { name: { contains: term, mode: 'insensitive' } },
-                          { email: { contains: term, mode: 'insensitive' } },
-                          { company: { contains: term, mode: 'insensitive' } }
-                      ]
-                  }
+                    OR: [
+                        { name: { contains: term, mode: 'insensitive' } },
+                        { email: { contains: term, mode: 'insensitive' } },
+                        { company: { contains: term, mode: 'insensitive' } }
+                    ]
+                }
                 : {})
         }
 
