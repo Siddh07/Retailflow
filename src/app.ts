@@ -11,6 +11,8 @@ import {
     requireAdmin
 } from './auth/middleware.js'
 import { createProductRouter } from './routes/product.routes.js'
+import { createCustomerRouter } from './customers/routes.js'
+import { createInventoryRouter } from './inventory/routes.js'
 import { errorHandler } from './middleware/error-handler.js'
 
 export function createApp(
@@ -60,6 +62,18 @@ export function createApp(
         '/api/v1/products',
         requireAuth,
         createProductRouter(db)
+    )
+
+    app.use(
+        '/api/v1/customers',
+        requireAuth,
+        createCustomerRouter(db)
+    )
+
+    app.use(
+        '/api/v1/inventory',
+        requireAuth,
+        createInventoryRouter(db)
     )
 
     app.use((req, res) => {

@@ -11,18 +11,18 @@ datasource db {
 }
 
 model Product {
-  id                String               @id @default(uuid()) @db.Uuid
-  name              String               @db.VarChar(100)
-  sku               String               @unique @db.VarChar(30)
-  price             Int
-  costPrice         Int?                 @map("cost_price")
-  barcode           String?              @db.VarChar(100)
-  stockQuantity     Int                  @map("stock_quantity")
-  lowStockThreshold Int                  @default(0) @map("low_stock_threshold")
-  isActive          Boolean              @default(true) @map("is_active")
-  createdAt         DateTime             @default(now()) @map("created_at")
-  updatedAt         DateTime             @updatedAt @map("updated_at")
-  orderItems        OrderItem[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  name               String              @db.VarChar(100)
+  sku                String              @unique @db.VarChar(30)
+  price              Int
+  costPrice          Int?                @map("cost_price")
+  barcode            String?             @db.VarChar(100)
+  stockQuantity      Int                 @map("stock_quantity")
+  lowStockThreshold  Int                 @default(5) @map("low_stock_threshold")
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  orderItems         OrderItem[]
   inventoryMovements InventoryMovement[]
 
   @@index([isActive, name, id])
@@ -57,14 +57,15 @@ enum PaymentMethod {
 }
 
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  email        String    @unique @db.VarChar(254)
-  passwordHash String    @map("password_hash")
-  role         Role      @default(CASHIER)
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  orders       Order[]
-  sessions     Session[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  email              String              @unique @db.VarChar(254)
+  passwordHash       String              @map("password_hash")
+  role               Role                @default(CASHIER)
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  orders             Order[]
+  sessions           Session[]
+  inventoryMovements InventoryMovement[]
 
   @@map("users")
 }
@@ -83,20 +84,21 @@ model Customer {
 }
 
 model Order {
-  id            String        @id @default(uuid()) @db.Uuid
-  orderNumber   String        @unique @map("order_number")
-  customerId    String?       @map("customer_id") @db.Uuid
-  cashierId     String        @map("cashier_id") @db.Uuid
-  subtotal      Int
-  tax           Int           @default(0)
-  discount      Int           @default(0)
-  total         Int
-  paymentMethod PaymentMethod @default(CASH) @map("payment_method")
-  status        OrderStatus   @default(COMPLETED)
-  createdAt     DateTime      @default(now()) @map("created_at")
-  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  cashier       User          @relation(fields: [cashierId], references: [id], onDelete: Restrict)
-  items         OrderItem[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  orderNumber        String              @unique @map("order_number")
+  customerId         String?             @map("customer_id") @db.Uuid
+  cashierId          String              @map("cashier_id") @db.Uuid
+  subtotal           Int
+  tax                Int                 @default(0)
+  discount           Int                 @default(0)
+  total              Int
+  paymentMethod      PaymentMethod       @default(CASH) @map("payment_method")
+  status             OrderStatus         @default(COMPLETED)
+  createdAt          DateTime            @default(now()) @map("created_at")
+  customer           Customer?           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  cashier            User                @relation(fields: [cashierId], references: [id], onDelete: Restrict)
+  items              OrderItem[]
+  inventoryMovements InventoryMovement[]
 
   @@index([customerId, createdAt])
   @@index([cashierId])
@@ -136,8 +138,8 @@ model Session {
 }
 
 model InventoryMovement {
-  id        String       @id @default(uuid()) @db.Uuid 
-  productId String       @map("product_id") @db.Uuid 
+  id        String       @id @default(uuid()) @db.Uuid
+  productId String       @map("product_id") @db.Uuid
   kind      MovementKind
   delta     Int
   reason    String       @db.VarChar(200)
@@ -149,7 +151,8 @@ model InventoryMovement {
   actor   User?   @relation(fields: [actorId], references: [id], onDelete: Restrict)
   order   Order?  @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
-  @@index([productId, createdAt])
+  @@index([productId, createdAt, id])
   @@index([actorId])
+  @@index([orderId])
   @@map("inventory_movements")
 }
