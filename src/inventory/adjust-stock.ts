@@ -36,8 +36,8 @@ export async function adjustStock(
             if (!activeProduct) {
                 throw new ApiError(
                     404,
-                    'PRODUCT_NOT_FOUND',
-                    'Product not found'
+                    'PRODUCT_IS_NOT_FOUND',
+                    'Product is not found'
                 )
             }
 
