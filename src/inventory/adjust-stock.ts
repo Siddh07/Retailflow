@@ -48,15 +48,6 @@ export async function adjustStock(
             )
         }
 
-
-
-
-
-
-
-
-
-
         const movement = await tx.inventoryMovement.create({
             data: {
                 productId,
