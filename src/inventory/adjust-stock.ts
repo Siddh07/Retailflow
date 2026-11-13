@@ -33,13 +33,7 @@ export async function adjustStock(
                 select: { id: true }
             })
 
-            if (!activeProduct) {
-                throw new ApiError(
-                    404,
-                    'PRODUCT_IS_NOT_FOUND',
-                    'Product is not found'
-                )
-            }
+
 
             throw new ApiError(
                 409,
