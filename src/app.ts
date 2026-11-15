@@ -76,6 +76,11 @@ export function createApp(
         createInventoryRouter(db)
     )
 
+    app.use(
+        '/api/v1/contact',
+        requireAuth,
+        createInventoryRouter(db)
+    )
     app.use((req, res) => {
         res.status(404).json({
             error: {
