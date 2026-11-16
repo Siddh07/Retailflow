@@ -31,8 +31,10 @@ export function createApp(
             allowedHeaders: [
                 'Content-Type',
                 'Authorization',
-                'X-CSRF-Protection'
-            ]
+                'X-CSRF-Protection',
+                'Idempotency-Key'
+            ],
+            exposedHeaders: ['Idempotency-Replayed', 'Location']
         })
     )
 

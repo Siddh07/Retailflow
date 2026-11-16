@@ -51,6 +51,9 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await db.$transaction([
+        db.auditEvent.deleteMany(),
+        db.refund.deleteMany(),
+        db.checkoutAttempt.deleteMany(),
         db.inventoryMovement.deleteMany(),
         db.session.deleteMany(),
         db.orderItem.deleteMany(),
