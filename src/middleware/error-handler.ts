@@ -64,6 +64,16 @@ export const errorHandler: ErrorRequestHandler = (
             })
             return
         }
+
+        if (error.code === 'P2034') {
+            res.status(409).json({
+                error: {
+                    code: 'TRANSACTION_CONFLICT',
+                    message: 'The transaction conflicted with another operation'
+                }
+            })
+            return
+        }
     }
 
     const isInvalidJson =

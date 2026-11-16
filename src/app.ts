@@ -13,6 +13,7 @@ import {
 import { createProductRouter } from './routes/product.routes.js'
 import { createCustomerRouter } from './customers/routes.js'
 import { createInventoryRouter } from './inventory/routes.js'
+import { createOrdersRouter } from './orders/routes.js'
 import { errorHandler } from './middleware/error-handler.js'
 
 export function createApp(
@@ -77,9 +78,9 @@ export function createApp(
     )
 
     app.use(
-        '/api/v1/contact',
+        '/api/v1/orders',
         requireAuth,
-        createInventoryRouter(db)
+        createOrdersRouter(db)
     )
     app.use((req, res) => {
         res.status(404).json({
