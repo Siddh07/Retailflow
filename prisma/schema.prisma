@@ -114,6 +114,7 @@ model Order {
   refund             Refund?
   auditEvents        AuditEvent[]
 
+  @@index([status, createdAt])
   @@index([customerId, createdAt])
   @@index([cashierId])
   @@index([createdAt])
@@ -198,6 +199,7 @@ model Refund {
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
   actor     User     @relation("RefundActor", fields: [actorId], references: [id], onDelete: Restrict)
 
+  @@index([createdAt])
   @@map("refunds")
 }
 
