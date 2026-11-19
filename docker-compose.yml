@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  # SERVICE 1: PostgreSQL Database Container
+  postgres:
+    image: postgres:16-alpine
+    container_name: retailflow-db
+    environment:
+      POSTGRES_USER: retailflow_dev
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: retailflow_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U retailflow_dev" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  # SERVICE 2: RetailFlow Node.js API Container
+
+api:
+  build:
+    context: .
+    target: runner
+  container_name: retailflow-api
+  depends_on:
+    postgres:
+      condition: service_healthy
+  ports:
+    - "4000:4000"
+  environment:
+    NODE_ENV: production
+    PORT: 4000
+    DATABASE_URL: "postgresql://retailflow_dev:dev_password@postgres:5432/retailflow_dev?schema=public"
+    JWT_SECRET_BASE64: "dGVzdC1zZWNyZXQta2V5LXdpdGgtMzItY2hhcmFjdGVycw=="
+    APP_ORIGIN: "http://localhost:5173"
+
+# VOLUMES: Persistent Storage
+
+volumes:
+  pgdata:
