@@ -77,41 +77,6 @@ export async function getSalesOverview(
     };
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export async function getOrderHistory(
-    db: PrismaClient,
-    params: {
-        fromUTC: Date;
-        toUTC: Date;
-        status?: 'COMPLETED' | 'REFUNDED';
-        page: number;
-        limit: number;
-    return {
-        orderCount,
-        grossSales,
-        discounts,
-        tax,
-        totalBilled,
-        refundCount,
-        refunds,
-        netSales,
-        averageOrderValue,
-    };
-}
-
 export async function getOrderHistory(
     db: PrismaClient,
     params: {
