@@ -17,13 +17,16 @@ export const createProductSchema = z.strictObject({
 
     price: z.number().int().min(0).max(1_000_000_000),
 
-    stockQuantity: z.number().int().min(0).max(1_000_000)
+    stockQuantity: z.number().int().min(0).max(1_000_000),
+
+    lowStockThreshold: z.number().int().min(0).max(1_000_000).optional()
 })
 
 export const updateProductSchema = createProductSchema
+    .omit({ stockQuantity: true })
     .partial()
     .refine((data) => Object.keys(data).length > 0, {
-        message: 'Provide at least one field to update'
+        message: 'Provide at least one editable field'
     })
 
 const positiveIntegerQuery = z

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { ApiError } from '../errors/api-error.js'
-import { requireAdmin } from '../auth/middleware.js'
+import { currentAuth, requireAdmin } from '../auth/middleware.js'
 import {
     createProductSchema,
     updateProductSchema,
@@ -92,9 +92,24 @@ export function createProductRouter(db: PrismaClient) {
 
     router.post('/', requireAdmin, async (req, res) => {
         const input = createProductSchema.parse(req.body)
+        const actorId = currentAuth(res).user.id
 
-        const product = await db.product.create({
-            data: input
+        const product = await db.$transaction(async (tx) => {
+            const created = await tx.product.create({ data: input })
+
+            if (created.stockQuantity > 0) {
+                await tx.inventoryMovement.create({
+                    data: {
+                        productId: created.id,
+                        actorId,
+                        kind: 'OPENING',
+                        delta: created.stockQuantity,
+                        reason: 'Initial stock entered during product creation'
+                    }
+                })
+            }
+
+            return created
         })
 
         res

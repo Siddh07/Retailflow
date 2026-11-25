@@ -1,0 +1,77 @@
+name: CI Pipeline
+
+# 1. Run on every push or pull request targeting the 'main' or 'phase*' branches
+on:
+  push:
+    branches: [main, 'phase*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # 2. Spin up a real PostgreSQL service container in the GitHub cloud (P9-04)
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: retailflow_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: retailflow_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # 3. Check out the code from your repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 4. Install Node.js version 22 and cache npm packages to speed up builds
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      # 5. Clean install of all dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # 6. Generate Prisma Client before TypeScript checks (src/generated/ is gitignored)
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "postgresql://retailflow_test:test_password@localhost:5433/retailflow_test?schema=public"
+        run: npx prisma generate --config prisma.test.config.ts
+
+      # 7. Typecheck source code (P9-03)
+      - name: Check TypeScript (Source)
+        run: npm run typecheck
+
+      # 8. Typecheck test code (P9-03)
+      - name: Check TypeScript (Tests)
+        run: npm run typecheck:tests
+
+      # 9. Run Prisma migrations against the cloud PostgreSQL service
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: "postgresql://retailflow_test:test_password@localhost:5433/retailflow_test?schema=public"
+        run: npx prisma migrate deploy --config prisma.test.config.ts
+
+      # 10. Run all Vitest integration tests against the cloud PostgreSQL database
+      - name: Run Test Suite
+        env:
+          NODE_ENV: test
+          DATABASE_URL: "postgresql://retailflow_test:test_password@localhost:5433/retailflow_test?schema=public"
+          JWT_SECRET_BASE64: "dGVzdC1zZWNyZXQta2V5LXdpdGgtMzItY2hhcmFjdGVycw=="
+          APP_ORIGIN: "http://localhost:5173"
+        run: npm test
+
+      # 11. Verify that our multi-stage Dockerfile builds with zero errors
+      - name: Verify Docker Container Build
+        run: docker build -t retailflow-api:ci-test .

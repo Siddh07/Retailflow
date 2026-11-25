@@ -26,10 +26,26 @@ async function main() {
     ]
 
     for (const product of products) {
-        await db.product.upsert({
-            where: { sku: product.sku },
-            update: {},
-            create: product
+        await db.$transaction(async (tx) => {
+            const existing = await tx.product.findUnique({
+                where: { sku: product.sku },
+                select: { id: true }
+            })
+
+            if (existing) return
+
+            const created = await tx.product.create({ data: product })
+
+            if (created.stockQuantity > 0) {
+                await tx.inventoryMovement.create({
+                    data: {
+                        productId: created.id,
+                        kind: 'OPENING',
+                        delta: created.stockQuantity,
+                        reason: 'Initial development seed stock'
+                    }
+                })
+            }
         })
     }
 
