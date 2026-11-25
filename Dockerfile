@@ -3,11 +3,10 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# 1. Copy dependency manifests and Prisma schema (for Docker layer caching)
+# 1. Copy dependency manifests, Prisma schema, and Prisma config (for Docker layer caching)
 COPY package*.json ./
 COPY prisma ./prisma/
-# Uncomment the next line if you have a prisma.config.ts in your project root:
-# COPY prisma.config.ts ./
+COPY prisma.config.ts ./
 
 # 2. Download exact dependencies from package-lock.json
 RUN npm ci
@@ -17,7 +16,7 @@ COPY tsconfig*.json ./
 COPY src ./src
 
 # 4. Generate the Prisma client & compile TypeScript to dist/
-RUN npx prisma generate
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" SHADOW_DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate
 RUN npm run build
 
 
@@ -30,11 +29,9 @@ ENV NODE_ENV=production
 
 # 1. Install only production dependencies
 COPY package*.json ./
-COPY prisma ./prisma/
 RUN npm ci --omit=dev
 
-# 2. Copy generated Prisma client and compiled JS from Stage 1
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# 2. Copy compiled JS (which includes dist/generated/prisma/) from Stage 1
 COPY --from=builder /app/dist ./dist
 
 # 3. Switch to non-admin user for security

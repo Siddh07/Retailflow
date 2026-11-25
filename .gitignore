@@ -5,3 +5,5 @@ dist/
 !.env.example
 src/generated/
 *.log
+backups/
+backups/
