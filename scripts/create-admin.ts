@@ -12,9 +12,10 @@ const input = z
     .parse(process.env)
 
 const url = new URL(input.DATABASE_URL)
+const allowRemote = process.env.ALLOW_REMOTE_BOOTSTRAP === 'true'
 if (
-    url.hostname !== 'localhost' ||
-    url.pathname !== '/retailflow_dev'
+    !allowRemote &&
+    (url.hostname !== 'localhost' || url.pathname !== '/retailflow_dev')
 ) {
     throw new Error('This bootstrap script expects local retailflow_dev')
 }
